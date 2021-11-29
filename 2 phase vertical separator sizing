@@ -1,0 +1,89 @@
+import math
+import pandas as pd
+
+
+
+'#inputs'
+Qg = input('Gas flowrate(m3/hr):')
+Ql = input("Liquid flowrate(m3/hr):")
+Design_Factor = input("Design Factor:")
+gas_density = input("Gas Density(kg/m3):")
+liquid_density = input("Liquid Density(kg/m3):")
+print("Note: Souders-Brown Coefficient (K) range is 0.11 ~ 0.24 m/s if there is no internal device in the vessel take K = 1")
+K = input("K:")
+print("Note: If the particle size of liquid in gas is unknown take it 150 micron")
+Dp = input("Dp(micron):")
+viscosity = input("Gas Viscosity(cp):")
+t_LSH = input("High Level Surge Time(min):")
+t_Slug_Capacity = input("Slug Capacity Time(min):")
+print("Control Surge Time range is 2 ~ 10 min")
+t_LGLC = input("Control Surge Time(min):")
+t_LLL_LLLL = input("Low Level Response(min):")
+LD_needed = input("L/D:")
+
+"#drag drag coefficient(C') calculations"
+C_Re2 = float(1.31 * (10 ** 7) * float(gas_density) * (pow(float(float(Dp) / (10 ** 6)), 3) *
+                                                       (float(liquid_density) - float(gas_density))) / (
+                  pow(float(viscosity), 2)))
+C = 0.680879613417433 + (74541806.2824901 - 0.680879613417433) / \
+    (1 + (float(C_Re2) / 0.000000260286797461) ** 0.804188217760428)
+"#rated flow calqulations"
+rated_Qg = float(Qg) * float(Design_Factor) / 3600
+rated_Ql = float(Ql) * float(Design_Factor) / 3600
+"#termenal velocity& max terminal velocity calculations"
+Vt = math.sqrt((4 / 3 / float(C)) * float(9.81) * float(Dp) / (10 ** 6) *
+               (float(liquid_density) - float(gas_density)) / (float(float(gas_density))))
+Vmax = float(K) * float(Vt)
+"#gas area calculations"
+A = float(rated_Qg) / float(Vmax)
+
+"#vessel diameter calculations"
+IDm = math.sqrt(4 * A / math.pi)
+IDmm = math.ceil(float(IDm * 1000))
+
+"#vessel upper heights calculations"
+Mist_Extractor = int(150)
+MExtractor_to_Inletdivertor = math.ceil(max(IDmm, int(600)))
+Inletdivertor_to_Inlet = float(IDmm)
+
+"#vessel lower heights calculations"
+Inlet_to_LSH = math.ceil(float(max(float(300), float((float(t_LSH) * float(rated_Ql) / (math.pi * (IDmm ^ 2))) / 60))))
+Slug_Capacity = math.ceil(float(max(float(300), float((float(t_Slug_Capacity) * float(rated_Ql) /
+                                                       (math.pi * (IDmm ^ 2))) / 60))))
+HLL_to_LLL = math.ceil(float(max(float(300), float((float(t_LGLC) * float(rated_Ql) / (math.pi * (IDmm ^ 2))) / 60))))
+LLL_to_LLLL = math.ceil(
+    float(max(float(300), float((float(t_LLL_LLLL) * float(rated_Ql) / (math.pi * (IDmm ^ 2))) / 60))))
+LLLL_to_Bottom = int(300)
+Vessel_L = float(
+    (Mist_Extractor + MExtractor_to_Inletdivertor + 2 * Inletdivertor_to_Inlet + Inlet_to_LSH + Slug_Capacity
+     + HLL_to_LLL + LLL_to_LLLL + LLLL_to_Bottom) / 1000)
+Inlet_h = float(
+    (Inletdivertor_to_Inlet + Inlet_to_LSH + Slug_Capacity + HLL_to_LLL + LLL_to_LLLL + LLLL_to_Bottom) / 1000)
+HHLL_to_Bottom = float(Slug_Capacity + HLL_to_LLL + LLL_to_LLLL + LLLL_to_Bottom)
+HLL_to_Bottom = float(HLL_to_LLL + LLL_to_LLLL + LLLL_to_Bottom)
+LLL_to_Bottom = float(LLL_to_LLLL + LLLL_to_Bottom)
+LLLL_to_Bottom = float(LLLL_to_Bottom)
+
+"#IDm will be taken 1 : L/D"
+ID_selected_m = float(Vessel_L) / float(LD_needed)
+LD = float(Vessel_L / ID_selected_m)
+
+"#resulta"
+Results = {"Results": ["C'.Re2", "C'", "Qg rated(m3/hr)", "Ql rated(m3/hr)", "Vt(m/s)", "K", "Vmax(m/s)", "A(m2)","min ID(m)", " ",
+                       "ID(m)", "Vessel L S/S (m)", "Inlet nozzle height from Bottom tangent(m)",
+                       "HHLL to Bottom tangent(mm)", "HLL to Bottom tangent(mm)", "LLL to Bottom tangent(mm)", "LLLL to Bottom tangent(mm)", "L/D"],
+           "Values": [C_Re2, C, rated_Qg * 3600, rated_Ql * 3600, Vt, float(K), Vmax, A,IDm, " ", ID_selected_m, Vessel_L,
+                      Inlet_h, HHLL_to_Bottom, HLL_to_Bottom, LLL_to_Bottom, LLLL_to_Bottom, LD]}
+df = pd.DataFrame(Results, columns=["Results", "Values"])
+print(df)
+
+"#exporting excel file"
+
+
+writer = pd.ExcelWriter("C:\\Users\\Dell\\Desktop\\pythonProject1\\Results.xlsx")
+"# write dataframe to excel"
+
+df.to_excel(writer)
+# save the excel
+writer.save()
+print('DataFrame is written successfully to Excel File.')
